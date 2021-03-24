@@ -2,9 +2,9 @@
 
 ## 1. Brief
 
-TIM-VX is a software integration module provided by VeriSilicon to facilitate deployment of Neural-Networks on OpenVX enabled ML accelerators.
+[TIM-VX](https://github.com/VeriSilicon/TIM-VX.git) is a software integration module provided by VeriSilicon to facilitate deployment of Neural-Networks on OpenVX enabled ML accelerators.
 
-Tengine Lite has supported to integrate with TIM-VX Library of Verisilicon to inference CNN by Khadas VIM3(Amlogic A311D).
+Tengine Lite has supported to integrate with TIM-VX Library of Verisilicon to inference CNN by [Khadas VIM3](https://www.khadas.cn/product-page/vim3)(Amlogic A311D).
 
 ## 2. How to Build
 
@@ -35,6 +35,7 @@ $ cp -rf ../TIM-VX/include/*    ./3rdparty/tim-vx/include/
 $ cp -rf ../TIM-VX/src    ./src/dev/tim-vx/
 $ cp -rf ../TIM-VX/prebuilt-sdk/x86_64_linux/include/*    ./3rdparty/tim-vx/include/
 $ cp -rf ../TIM-VX/prebuilt-sdk/x86_64_linux/lib/*    ./3rdparty/tim-vx/lib/x86_64/
+$ rm ./src/dev/tim-vx/src/tim/vx/*_test.cc
 ```
 
 #### 2.2 Prepare for on Khadas VIM3 platform
@@ -57,6 +58,7 @@ $ cp -rf ../TIM-VX/include/*    ./3rdparty/tim-vx/include/
 $ cp -rf ../TIM-VX/src    ./src/dev/tim-vx/
 $ cp -rf ../prebuild-sdk-a311d/include/*    ./3rdparty/tim-vx/include/
 $ cp -rf ../prebuild-sdk-a311d/lib/*    ./3rdparty/tim-vx/lib/aarch64/
+$ rm ./src/dev/tim-vx/src/tim/vx/*_test.cc
 ```
 
 #### 2.3 Build Tengine Lite with TIM-VX
@@ -86,7 +88,17 @@ build-tim-vx-arm64/install/lib/
 └── libtengine-lite.so
 ```
 
-On the Khadas VIM3, it need to replace those libraries in the /lib/ path
+On the Khadas VIM3, it need to replace those libraries in the /lib/ 
+
+#### 3.2 Replace the kernel module on the board if necessary
+- Q: Why?
+- A: Because the firmware of Khadas VIM3 maybe pre-install old version kernel module of NPU  
+- Q: How to?
+- A: Remove the old kernel module and replace it with the new version(in the /prebuild-sdk-a311d/lib/galcore.ko) 
+```
+$ rmmod galcore
+$ insmod galcore.ko
+```
 
 #### 3.2 Set uint8 Inference mode
 
@@ -123,3 +135,15 @@ Repeat 10 times, thread 1, avg time 2.95 ms, max_time 3.42 ms, min_time 2.76 ms
 32.045452, 277
 30.780502, 282
 ```
+
+### 4. Support list
+| Vendor  | Devices      |
+| ------- | ------------ |
+| Amlogic | A311D        |
+| NXP     | i.MX 8M Plus |
+| X86-64  | Simulator    |
+
+### 5. The uint8 quantization model
+The TIM-VX NPU backend needs the uint8 tmfile as it's input model file, you can **quantize** the tmfile from **float32** to **uint8** from here. 
+- [Tengine Post Training Quantization Tools](../tools/quantize/README.md)
+- [Download the uint8 quant tool](https://github.com/OAID/Tengine/releases/download/lite-v1.3/quant_tool_uint8)

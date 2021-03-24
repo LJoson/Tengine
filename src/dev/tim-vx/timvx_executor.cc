@@ -52,6 +52,7 @@ void VXEngine::VXTensorMap(struct ir_graph* ir_graph, int ir_tensor_idx, int spe
         struct ir_tensor* ir_tensor = get_ir_graph_tensor(ir_graph, ir_tensor_idx);
         unsigned int* Dims = (unsigned int*)ir_tensor->dims;
 
+        /* set data type */
         tim::vx::DataType datatype;
         switch(ir_tensor->data_type)
         {
@@ -75,6 +76,7 @@ void VXEngine::VXTensorMap(struct ir_graph* ir_graph, int ir_tensor_idx, int spe
         tim::vx::ShapeType vx_shape;
         TLOG_INFO("Log:ir_tensor->dim_num %d\n",ir_tensor->dim_num);
 
+        /* set dims */
         struct ir_node* ir_node = get_ir_graph_node(ir_graph, ir_tensor->producer);
         if (ir_node->op.op_type == OP_FC && ir_node->output_tensors[0] == ir_tensor_idx)
         {
@@ -82,6 +84,12 @@ void VXEngine::VXTensorMap(struct ir_graph* ir_graph, int ir_tensor_idx, int spe
             {
                 vx_shape.push_back(Dims[i]);
             }
+        }
+        else if (spec_type == SPEC_TYPE_PRELU)
+        {
+            vx_shape.push_back(1);
+            vx_shape.push_back(1);
+            vx_shape.push_back(Dims[0]);
         }
         else
         {
@@ -91,9 +99,11 @@ void VXEngine::VXTensorMap(struct ir_graph* ir_graph, int ir_tensor_idx, int spe
             }
         }
 
+        /* set quant params */
         tim::vx::Quantization vx_quant(tim::vx::QuantType::ASYMMETRIC, ir_tensor->scale,
                                        ir_tensor->zero_point);
 
+        /* create the vx tesnor */
         std::shared_ptr<tim::vx::Tensor> vx_tensor;
 
         TLOG_INFO("Log:#### 010 %d\n",spec_type);         
@@ -110,6 +120,13 @@ void VXEngine::VXTensorMap(struct ir_graph* ir_graph, int ir_tensor_idx, int spe
             vx_shape[ir_tensor->dim_num - 1] = 1;
             tim::vx::TensorSpec vx_spec(datatype, vx_shape,
                                         tim::vx::TensorAttribute::CONSTANT, vx_quant);
+            vx_tensor = this->graph->CreateTensor(vx_spec, ir_tensor->data);
+        }
+        else if (spec_type == SPEC_TYPE_PRELU)
+        {
+            TLOG_INFO("Log:#### 111 SPEC_TYPE_PRELU\n");
+            tim::vx::TensorSpec vx_spec(datatype, vx_shape,
+                                        tim::vx::TensorAttribute::CONSTANT);
             vx_tensor = this->graph->CreateTensor(vx_spec, ir_tensor->data);
         }
         else if (ir_tensor->tensor_type == TENSOR_TYPE_INPUT )
@@ -159,11 +176,17 @@ int VXEngine::Build(struct subgraph* subgraph)
             case OP_CONV:
                 this->AddConvolutionNode(ir_node);
                 break;
+            case OP_DEPTHTOSPACE:
+                this->AddDepthToSpaceNode(ir_node);
+                break;
             case OP_DROPOUT:
                 this->AddDropoutNode(ir_node);
                 break;
             case OP_ELTWISE:
-                this->AddEltwisSumNode(ir_node);
+                this->AddEltwiseNode(ir_node);
+                break;
+            case OP_ELU:
+                this->AddEluNode(ir_node);
                 break;
             case OP_FC:
                 this->AddFullyConnectionNode(ir_node);
@@ -171,23 +194,51 @@ int VXEngine::Build(struct subgraph* subgraph)
             case OP_FLATTEN:
                 this->AddFlattenNode(ir_node);
                 break;
+            case OP_GATHER:
+                this->AddGatherNode(ir_node);
+                break;
+            case OP_HARDSWISH:
+                this->AddHardSwishNode(ir_node);
+                break;
+            case OP_INTERP:
+                this->AddInterpNode(ir_node);
+                break;
 //            case OP_PERMUTE:
 //                this->AddPermuteNode(ir_graph, ir_node);
 //                break;
             case OP_POOL:
                 this->AddPoolingNode(ir_node);
                 break;
+            case OP_PRELU:
+                this->AddPReluNode(ir_node);
+                break;
             case OP_RELU:
                 this->AddReluNode(ir_node);
                 break;
-//            case OP_RESHAPE:
-//                this->AddReshapeNode(ir_graph, ir_node);
-//                break;
-//            case OP_SLICE:
-//                this->AddSliceNode(ir_graph, ir_node);
-//                break;
-//            case OP_SOFTMAX:
-//                this->AddSoftmaxNode(ir_graph, ir_node);
+            case OP_RELU1:
+                this->AddRelu1Node(ir_node);
+                break;
+            case OP_RESHAPE:
+                this->AddReshapeNode(ir_node);
+                break;
+            case OP_SIGMOID:
+                this->AddSigmoidNode(ir_node);
+                break;
+            case OP_SLICE:
+                this->AddSliceNode(ir_node);
+                break;
+            case OP_SOFTMAX:
+                this->AddSoftmaxNode(ir_node);
+                break;
+            case OP_SPACETODEPTH:
+                this->AddSpaceToDepthNode(ir_node);
+                break;
+            case OP_TANH:
+                this->AddTanhNode(ir_node);
+                break;
+            case OP_UPSAMPLE:
+                this->AddUpsampleNode(ir_node);
+                break;
             default:
                 fprintf(stderr, "Tengine TIM-VX: Cannot support OP(%d).\n", ir_node->idx);
                 break;
@@ -219,7 +270,12 @@ int VXEngine::VXEnginePreRun(struct subgraph* subgraph)
                 TLOG_INFO("Log:#### 000 SPEC_TYPE_DWCONV\n");
                 this->VXTensorMap(ir_graph, ir_node->input_tensors[1], SPEC_TYPE_DWCONV);
             }       
-        } 
+        }
+        else if (ir_node->op.op_type == OP_PRELU)
+        {
+            TLOG_INFO("Log:#### 001 SPEC_TYPE_PRELU\n");
+            this->VXTensorMap(ir_graph, ir_node->input_tensors[1], SPEC_TYPE_PRELU);
+        }
     }
     for (int i = 0; i < subgraph->node_num; i++)
     {
