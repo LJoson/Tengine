@@ -26,7 +26,7 @@
 #include <stdio.h>
 
 #include "common.h"
-#include "tengine_c_api.h"
+#include "tengine/c_api.h"
 #include "tengine_operations.h"
 #include "compiler_fp16.h"
 
@@ -76,7 +76,6 @@ int tengine_classify(const char* model_file, const char* image_file, int img_h, 
     if (NULL == graph)
     {
         fprintf(stderr, "Create graph failed.\n");
-        fprintf(stderr, "errno: %d \n", get_tengine_errno());
         return -1;
     }
 

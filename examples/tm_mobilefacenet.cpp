@@ -27,7 +27,7 @@
 #include <vector>
 
 #include "common.h"
-#include "tengine_c_api.h"
+#include "tengine/c_api.h"
 #include "tengine_operations.h"
 
 #define DEFAULT_MEAN1 104.007
@@ -50,7 +50,7 @@ void init(const char* modelfile)
     graph = create_graph(NULL, "tengine", modelfile);
     if (graph == NULL)
     {
-        fprintf(stderr, "grph nullptr %d\n", get_tengine_errno());
+        fprintf(stderr, "grph nullptr\n");
     }
     else
     {

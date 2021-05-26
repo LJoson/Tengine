@@ -50,7 +50,7 @@
 
 #include "common.h"
 
-#include "tengine_c_api.h"
+#include "tengine/c_api.h"
 #include "tengine_operations.h"
 
 #define DEFAULT_REPEAT_COUNT 1
@@ -138,7 +138,7 @@ float iou(const Face2f& a, const Face2f& b)
     float xx1 = std::max(a.rect.x, b.rect.x);
     float yy1 = std::max(a.rect.y, b.rect.y);
     float xx2 = std::min(a.rect.x + a.rect.w, b.rect.x + b.rect.w);
-    float yy2 = std::min(a.rect.y + a.rect.w, b.rect.y + b.rect.h);
+    float yy2 = std::min(a.rect.y + a.rect.h, b.rect.y + b.rect.h);
 
     float w = std::max(float(0), xx2 - xx1 + 1);
     float h = std::max(float(0), yy2 - yy1 + 1);
@@ -221,8 +221,8 @@ void qsort_descent_inplace(std::vector<Face2f>& face_objects)
 
 std::vector<Box2f> generate_anchors(int base_size, const std::vector<float>& ratios, const std::vector<float>& scales)
 {
-    int num_ratio = ratios.size();
-    int num_scale = scales.size();
+    size_t num_ratio = ratios.size();
+    size_t num_scale = scales.size();
 
     std::vector<Box2f> anchors(num_ratio * num_scale);
 
@@ -478,7 +478,7 @@ int main(int argc, char* argv[])
     graph_t graph = create_graph(NULL, "tengine", model_file);
     if (graph == nullptr)
     {
-        printf("Load model to graph failed(%d).\n", get_tengine_errno());
+        printf("Load model to graph failed.\n");
         return -1;
     }
 

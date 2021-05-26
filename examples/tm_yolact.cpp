@@ -46,7 +46,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 #include "common.h"
-#include "tengine_c_api.h"
+#include "tengine/c_api.h"
 #include "tengine_operations.h"
 
 #define DEFAULT_REPEAT_COUNT 1
@@ -245,7 +245,6 @@ static int detect_yolact(const cv::Mat& bgr, std::vector<Object>& objects, const
     if (NULL == graph)
     {
         fprintf(stderr, "Create graph failed.\n");
-        fprintf(stderr, "errno: %d \n", get_tengine_errno());
         return -1;
     }
 
@@ -532,7 +531,7 @@ static void draw_objects(const cv::Mat& bgr, const std::vector<Object>& objects)
         }
     }
 
-    cv::imwrite("yolact_out.png", image);
+    cv::imwrite("yolact_out.jpg", image);
 }
 
 void show_usage()

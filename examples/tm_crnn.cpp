@@ -33,7 +33,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 #include "common.h"
-#include "tengine_c_api.h"
+#include "tengine/c_api.h"
 #include "tengine_operations.h"
 
 #define DEFAULT_REPEAT_COUNT 1
@@ -231,7 +231,6 @@ int main(int argc, char* argv[])
     if (graph == nullptr)
     {
         fprintf(stderr, "Create graph failed.\n");
-        fprintf(stderr, "errno: %d \n", get_tengine_errno());
         return -1;
     }
 

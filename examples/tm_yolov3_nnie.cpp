@@ -37,7 +37,7 @@
 #include <float.h>
 
 #include "common.h"
-#include "tengine_c_api.h"
+#include "tengine/c_api.h"
 #include "tengine_operations.h"
 #include "tengine_nnie_plugin.h"
 #include "test_nnie_all.hpp"
@@ -722,7 +722,6 @@ int main(int argc, char *argv[])
     if (NULL == graph)
     {
         fprintf(stderr, "Create graph failed.\n");
-        fprintf(stderr, "errno: %d \n", get_tengine_errno());
         return -1;
     }
 

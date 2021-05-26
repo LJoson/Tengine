@@ -31,7 +31,7 @@
 #include "opencv2/highgui/highgui.hpp"
 
 #include "common.h"
-#include "tengine_c_api.h"
+#include "tengine/c_api.h"
 #include "tengine_operations.h"
 
 #define DEFAULT_IMG_H 320
@@ -370,7 +370,7 @@ bool tengine_predict(float * input_data, graph_t graph, const int input_dims[4],
         return false;
     }
 
-    int input_data_size = input_dims[0] * input_dims[1] * input_dims[2] * input_dims[3] * sizeof(float);
+    size_t input_data_size = (unsigned long)input_dims[0] * input_dims[1] * input_dims[2] * input_dims[3] * sizeof(float);
     if (set_tensor_buffer(input_tensor, input_data, input_data_size) < 0)
     {
         fprintf(stderr, "Set input tensor buffer failed\n");
@@ -474,7 +474,6 @@ int main(int argc, char* argv[])
     if (graph == nullptr)
     {
         fprintf(stderr, "Create graph failed.\n");
-        fprintf(stderr, "errno: %d \n", get_tengine_errno());
         return -1;
     }
 

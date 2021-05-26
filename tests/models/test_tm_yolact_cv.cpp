@@ -49,7 +49,7 @@
 
 #include "common.hpp"
 #include <sys/time.h>
-#include "tengine_c_api.h"
+#include "tengine/c_api.h"
 #include "tengine_operations.h"
 
 #define DEFAULT_REPEAT_COUNT 1
@@ -243,7 +243,6 @@ printf("img:%d %d\n", img_w, img_h);
     if (NULL == graph)
     {
         fprintf(stderr, "Create graph failed.\n");
-        fprintf(stderr, "errno: %d \n", get_tengine_errno());
         return -1;
     }
 
@@ -633,7 +632,7 @@ int main(int argc, char** argv)
     cv::Mat m = cv::imread(image_file, 1);
     if (m.empty())
     {
-        fprintf(stderr, "cv::imread %s failed\n", image_file);
+        fprintf(stderr, "cv::imread %s failed\n", image_file.c_str());
         return -1;
     }
 

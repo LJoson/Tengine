@@ -46,7 +46,7 @@
 
 #include "common.hpp"
 #include <sys/time.h>
-#include "tengine_c_api.h"
+#include "tengine/c_api.h"
 #include "tengine_operations.h"
 
 #define DEFAULT_REPEAT_COUNT 1
@@ -79,7 +79,6 @@ static int detect_yolact(const char* model_file, int repeat_count,
     if (NULL == graph)
     {
         fprintf(stderr, "Create graph failed.\n");
-        fprintf(stderr, "errno: %d \n", get_tengine_errno());
         return -1;
     }
 
