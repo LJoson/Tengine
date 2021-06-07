@@ -103,6 +103,7 @@ private:
     bool AddGatherNode(struct node* node);
     bool AddHardSwishNode(struct node* node);
     bool AddInterpNode(struct node* ir_node);
+    bool AddMishNode(struct node* ir_node);
     bool AddPermuteNode(struct node* ir_node);
     bool AddPoolingNode(struct node* ir_node);
     bool AddPReluNode(struct node* ir_node);
@@ -126,6 +127,7 @@ public:
     std::shared_ptr<tim::vx::Context> context;
     std::shared_ptr<tim::vx::Graph> graph;
     std::shared_ptr<tim::vx::Operation> ops;
+    std::vector<char> nbg_buffer;
 
 private:
     dict_irt2vxt     vx_tensor_map;

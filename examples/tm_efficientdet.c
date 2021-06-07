@@ -111,7 +111,7 @@ int nms(const Box_t* boxes, const int num_boxes, int* suppressed, float nms_thre
                 continue;
 
             // iou
-            float intersection = fmaxf(fmin(a.x1, b.x1) - fmaxf(a.x0, b.x0), 0) * fmaxf(fminf(a.y1, b.y1) - fmaxf(a.y0, b.y0), 0);
+            float intersection = fmaxf(fminf(a.x1, b.x1) - fmaxf(a.x0, b.x0), 0) * fmaxf(fminf(a.y1, b.y1) - fmaxf(a.y0, b.y0), 0);
             float total_area = (a.x1 - a.x0) * (a.y1 - a.y0) + (b.x1 - b.x0) * (b.y1 - b.y0) - intersection;
             float iou = fmaxf(intersection / total_area, 0);
 
@@ -236,7 +236,6 @@ int tengine_detect(const char* model_file, const char* image_file, int img_h, in
     if (NULL == graph)
     {
         fprintf(stderr, "Create graph failed.\n");
-        fprintf(stderr, "errno: %d \n", get_tengine_errno());
         return -1;
     }
 
@@ -451,8 +450,10 @@ int tengine_detect(const char* model_file, const char* image_file, int img_h, in
     free(anchors_x1);
     free(anchors_y0);
     free(anchors_y1);
+    free(output_data_regression);
+    free(output_data_classification);
 
-    // filter boxes wiht confidence threshold
+    // filter boxes with confidence threshold
     Box_t* proposals_over_threshold = malloc(sizeof(Box_t) * num_proposals_over_threshold);
     int proposals_over_threshold_idx = 0;
     for (int i = 0; i < num_anchors; i++) {
@@ -490,7 +491,7 @@ int tengine_detect(const char* model_file, const char* image_file, int img_h, in
             fprintf(stderr, "BOX:( %d , %d ),( %d , %d )\n", box.x0, box.y0, box.x1, box.y1);
         }
 
-        save_image(im_vis, "tengine_example_out");
+        save_image(im_vis, "efficientdet_out");
 
         free(proposals_after_nms);
     }

@@ -19,9 +19,22 @@
 
 /*
  * Copyright (c) 2021, OPEN AI LAB
- * Author: lswang@openailab.com
+ * Author:
  */
 
-#pragma once
+#ifndef __CONCAT_KERNEL_REF_H__
+#define __CONCAT_KERNEL_REF_H__
 
-#define TIMVX_DEV_NAME "TIMVX"
+
+#include "graph/tensor.h"
+#include "graph/node.h"
+#include "graph/graph.h"
+
+
+int ref_concat_fp32(struct graph* ir_graph, struct node* ir_node, int axis);
+
+int ref_concat_int8(struct graph* ir_graph, struct node* ir_node, int axis);
+
+int ref_concat_uint8(struct graph* ir_graph, struct node* ir_node, int axis);
+
+#endif
