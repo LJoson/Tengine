@@ -353,7 +353,7 @@ static float get_input_data(const char *path, const float *mean, const float *no
     pad.h = lb.h - h; //(h + 31) / 32 * 32 - h;
     // Generate a gray image using opencv
     cv::Mat img_pad(lb.w, lb.h, CV_32FC3, //cv::Scalar(0));
-        cv::Scalar(0.5/norm[0] + mean[0], 0.5/norm[1] + mean[1], 0.5/norm[2] + mean[2]));
+        cv::Scalar(0.5/norm[0] + mean[0], 0.5/norm[0] + mean[0], 0.5/norm[2] + mean[2]));
     // Letterbox filling
     cv::copyMakeBorder(img, img_pad, pad.h/2, pad.h - pad.h/2, pad.w/2, pad.w - pad.w/2, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
 
@@ -378,10 +378,24 @@ static void show_usage() {
     fprintf(stderr, "   [-m model_file] [-i image_file] [-r repeat_count] [-t thread_count] [-o output_file]\n");
 }
 
+void get_input_uint8_data(float* input_fp32, uint8_t* input_data, int size, float input_scale, int zero_point)
+{
+    for (int i = 0; i < size; i++)
+    {
+        int udata = (round)(input_fp32[i] / input_scale + zero_point);
+        if (udata > 255)
+            udata = 255;
+        else if (udata < 0)
+            udata = 0;
+
+        input_data[i] = udata;
+    }
+}
+
 int main(int argc, char* argv[]) {
     const char* model_file = nullptr;
     const char* image_file = nullptr;
-    const char* output_file = "nanodet_m_out.jpg";
+    const char* output_file = "nanodet_m_uint8_out.jpg";
 
     const float mean[3] = { 103.53f, 116.28f, 123.675f }; // bgr
     const float norm[3] = { 0.017429f, 0.017507f, 0.017125f };
@@ -442,8 +456,16 @@ int main(int argc, char* argv[]) {
     }
     fprintf(stderr, "tengine-lite library version: %s\n", get_tengine_version());
 
+    /* create VeriSilicon TIM-VX backend */
+    context_t timvx_context = create_context("timvx", 1);
+    int rtt = set_context_device(timvx_context, "TIMVX", nullptr, 0);
+    if (0 > rtt)
+    {
+        fprintf(stderr, " add_context_device VSI DEVICE failed.\n");
+        return -1;
+    }
     /* create graph, load tengine model xxx.tmfile */
-    graph_t graph = create_graph(nullptr, "tengine", model_file);
+    graph_t graph = create_graph(timvx_context, "tengine", model_file);
     if (nullptr == graph) {
         fprintf(stderr, "Create graph failed.\n");
         return -1;
@@ -474,8 +496,15 @@ int main(int argc, char* argv[]) {
     get_input_data(image_file, mean, norm, lb);
 #endif /* TRY_LETTER_BOX */
 
+    std::vector<uint8_t> input_data(img_size);
+
+    float input_scale = 0.f;
+    int input_zero_point = 0;
+    get_tensor_quant_param(input_tensor, &input_scale, &input_zero_point, 1);
+    get_input_uint8_data(lb.data, input_data.data(), img_size, input_scale, input_zero_point);
+
     /* set the data mem to input tensor */
-    if (set_tensor_buffer(input_tensor, lb.data, img_size * sizeof(float)) < 0) {
+    if (set_tensor_buffer(input_tensor, input_data.data(), img_size) < 0) {
         fprintf(stderr, "Set input tensor buffer failed\n");
         return -1;
     }
@@ -508,17 +537,35 @@ int main(int argc, char* argv[]) {
 
     /* nanodet_m postprocess */
     std::vector<Object> proposals, objects;
-    for (int stride_index = 0; stride_index < 3; stride_index++) {
+    for (int stride_index = 0; stride_index < 3; stride_index++) 
+    {
         tensor_t cls_tensor = get_graph_tensor(graph, cls_pred_name[stride_index]);
         tensor_t dis_tensor = get_graph_tensor(graph, dis_pred_name[stride_index]);
-        if (NULL == cls_tensor || NULL ==dis_tensor) {
-            fprintf(stderr, "get graph tensor failed\n");
-            return -1;
-        }
-        const float *cls_pred = (const float *)get_tensor_buffer(cls_tensor);
-        const float *dis_pred = (const float *)get_tensor_buffer(dis_tensor);
-        generate_proposals(cls_pred, dis_pred, 1 << (stride_index + 3),
-            lb, prob_threshold, objects);
+
+        int cls_count  = get_tensor_buffer_size(cls_tensor) / sizeof(uint8_t);  
+        int dis_count  = get_tensor_buffer_size(dis_tensor) / sizeof(uint8_t);  
+
+        float cls_scale  = 0.f;
+        float dis_scale  = 0.f;
+        int cls_zero_point  = 0;
+        int dis_zero_point  = 0;
+
+        get_tensor_quant_param(cls_tensor, &cls_scale, &cls_zero_point, 1);
+        get_tensor_quant_param(dis_tensor, &dis_scale, &dis_zero_point, 1);
+        
+        const uint8_t *cls_pred_u8 = (const uint8_t *)get_tensor_buffer(cls_tensor);
+        const uint8_t *dis_pred_u8 = (const uint8_t *)get_tensor_buffer(dis_tensor);
+
+        std::vector<float> cls_pred(cls_count);
+        std::vector<float> dis_pred(dis_count);
+
+        for (int c = 0; c < cls_count; c++)
+            cls_pred[c] = (( float )cls_pred_u8[c] - ( float )cls_zero_point) * cls_scale;
+
+        for (int c = 0; c < dis_count; c++)
+            dis_pred[c] = (( float )dis_pred_u8[c] - ( float )dis_zero_point) * dis_scale;      
+        
+        generate_proposals(cls_pred.data(), dis_pred.data(), 1 << (stride_index + 3), lb, prob_threshold, objects);
         proposals.insert(proposals.end(), objects.begin(), objects.end());
     }
 
